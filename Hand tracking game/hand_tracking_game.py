@@ -1,10 +1,21 @@
 from utils import detector_utils as detector_utils
 import cv2
-import tensorflow as tf
 import datetime
 import argparse
+from kalman_filter import KalmanFilter
 
 detection_graph, sess = detector_utils.load_inference_graph()
+
+
+def predict_hand_movement(boxes, num, kalman):
+    (left, right, top, bottom) = (boxes[num][1] * im_width, boxes[num][3] * im_width,
+                                  boxes[num][0] * im_height, boxes[num][2] * im_height)
+
+    handX = left + (right - left) / 2
+    handY = bottom + (top - bottom) / 2
+
+    return kalman.estimate(handX, handY)
+
 
 if __name__ == '__main__':
 
@@ -29,6 +40,9 @@ if __name__ == '__main__':
     # max number of hands we want to detect/track
     num_hands_detect = 2
 
+    kfObj1 = KalmanFilter()
+    kfObj2 = KalmanFilter()
+
     cv2.namedWindow('Hand tracking game', cv2.WINDOW_NORMAL)
 
     while True:
@@ -51,6 +65,13 @@ if __name__ == '__main__':
         detector_utils.draw_box_on_image(num_hands_detect, args.score_thresh,
                                          scores, boxes, im_width, im_height,
                                          image_np)
+
+        predictedCoords = predict_hand_movement(boxes, 0, kfObj1)
+        cv2.circle(image_np, (predictedCoords[0], predictedCoords[1]), 20, (77, 255, 9), 2, 8)
+
+        predictedCoords = predict_hand_movement(boxes, 1, kfObj2)
+        cv2.circle(image_np, (predictedCoords[0], predictedCoords[1]), 20, (77, 255, 9), 2, 8)
+
 
         # Calculate Frames per second (FPS)
         num_frames += 1
