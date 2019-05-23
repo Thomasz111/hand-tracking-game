@@ -11,21 +11,26 @@ def predict_hand_movement(boxes, num, kalman):
     (left, right, top, bottom) = (boxes[num][1] * im_width, boxes[num][3] * im_width,
                                   boxes[num][0] * im_height, boxes[num][2] * im_height)
 
-    handX = left + (right - left) / 2
-    handY = bottom + (top - bottom) / 2
+    hand_x = left + (right - left) / 2
+    hand_y = bottom + (top - bottom) / 2
 
-    return kalman.estimate(handX, handY)
+    return kalman.estimate(hand_x, hand_y)
 
 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-sth', '--scorethreshold', dest='score_thresh', type=float, default=0.2, help='Score threshold for displaying bounding boxes')
-    parser.add_argument('-fps', '--fps', dest='fps', type=int, default=1, help='Show FPS on detection/display visualization')
+    parser.add_argument('-sth', '--scorethreshold', dest='score_thresh', type=float, default=0.2,
+                        help='Score threshold for displaying bounding boxes')
+    parser.add_argument('-fps', '--fps', dest='fps', type=int, default=1,
+                        help='Show FPS on detection/display visualization')
     parser.add_argument('-src', '--source', dest='video_source', default=0, help='Device index of the camera.')
-    parser.add_argument('-wd', '--width', dest='width', type=int, default=640, help='Width of the frames in the video stream.')
-    parser.add_argument('-ht', '--height', dest='height', type=int, default=480, help='Height of the frames in the video stream.')
-    parser.add_argument('-ds', '--display', dest='display', type=int, default=1, help='Display the detected images using OpenCV. This reduces FPS')
+    parser.add_argument('-wd', '--width', dest='width', type=int, default=640,
+                        help='Width of the frames in the video stream.')
+    parser.add_argument('-ht', '--height', dest='height', type=int, default=480,
+                        help='Height of the frames in the video stream.')
+    parser.add_argument('-ds', '--display', dest='display', type=int, default=1,
+                        help='Display the detected images using OpenCV. This reduces FPS')
     parser.add_argument('-num-w', '--num-workers', dest='num_workers', type=int, default=4, help='Number of workers.')
     parser.add_argument('-q-size', '--queue-size', dest='queue_size', type=int, default=5, help='Size of the queue.')
     args = parser.parse_args()
@@ -40,8 +45,9 @@ if __name__ == '__main__':
     # max number of hands we want to detect/track
     num_hands_detect = 2
 
-    kfObj1 = KalmanFilter()
-    kfObj2 = KalmanFilter()
+    kalman_filters = []
+    for i in range(num_hands_detect):
+        kalman_filters.append(KalmanFilter())
 
     cv2.namedWindow('Hand tracking game', cv2.WINDOW_NORMAL)
 
@@ -66,21 +72,19 @@ if __name__ == '__main__':
                                          scores, boxes, im_width, im_height,
                                          image_np)
 
-        predictedCoords = predict_hand_movement(boxes, 0, kfObj1)
-        cv2.circle(image_np, (predictedCoords[0], predictedCoords[1]), 20, (77, 255, 9), 2, 8)
-
-        predictedCoords = predict_hand_movement(boxes, 1, kfObj2)
-        cv2.circle(image_np, (predictedCoords[0], predictedCoords[1]), 20, (77, 255, 9), 2, 8)
-
+        # predict movement and drav circles
+        for i in range(num_hands_detect):
+            predicted_coords = predict_hand_movement(boxes, i, kalman_filters[i])
+            cv2.circle(image_np, (predicted_coords[0], predicted_coords[1]), 20, (77, 255, 9), 2, 8)
 
         # Calculate Frames per second (FPS)
         num_frames += 1
         elapsed_time = (datetime.datetime.now() - start_time).total_seconds()
         fps = num_frames / elapsed_time
 
-        if (args.display > 0):
+        if args.display > 0:
             # Display FPS on frame
-            if (args.fps > 0):
+            if args.fps > 0:
                 detector_utils.draw_fps_on_image("FPS : " + str(int(fps)),
                                                  image_np)
 
