@@ -3,6 +3,7 @@ import cv2
 import datetime
 import argparse
 from kalman_filter import KalmanFilter
+from utils import game_scene_manager
 
 detection_graph, sess = detector_utils.load_inference_graph()
 
@@ -50,6 +51,7 @@ if __name__ == '__main__':
         kalman_filters.append(KalmanFilter())
 
     cv2.namedWindow('Hand tracking game', cv2.WINDOW_NORMAL)
+    game_scene = game_scene_manager.GameScene(640, 480, 'Hand tracking game')
 
     while True:
         # Expand dimensions since the model expects images to have shape: [1, None, None, 3]
