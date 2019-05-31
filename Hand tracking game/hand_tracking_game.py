@@ -85,19 +85,8 @@ if __name__ == '__main__':
         num_frames += 1
         elapsed_time = (datetime.datetime.now() - start_time).total_seconds()
         fps = num_frames / elapsed_time
-
-        if args.display > 0:
-            # Display FPS on frame
-            if args.fps > 0:
-                detector_utils.draw_fps_on_image("FPS : " + str(int(fps)),
-                                                 image_np)
-
-            cv2.imshow('Hand tracking game', cv2.cvtColor(image_np, cv2.COLOR_RGB2BGR))
-            # game_scene.show_scene()
-
-            if cv2.waitKey(25) & 0xFF == ord('q'):
-                cv2.destroyAllWindows()
-                break
-        else:
-            print("frames processed: ", num_frames, "elapsed time: ",
-                  elapsed_time, "fps: ", str(int(fps)))
+        print(fps)
+        cv2.imshow('Hand tracking game', cv2.cvtColor(image_np, cv2.COLOR_RGB2BGR))
+        if cv2.waitKey(25) & 0xFF == ord('q'):
+            cv2.destroyAllWindows()
+            break
