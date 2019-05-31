@@ -3,7 +3,7 @@ import cv2
 import datetime
 import argparse
 from kalman_filter import KalmanFilter
-from utils import game_scene_manager
+# from utils import game_scene_manager
 
 detection_graph, sess = detector_utils.load_inference_graph()
 
@@ -51,7 +51,7 @@ if __name__ == '__main__':
         kalman_filters.append(KalmanFilter())
 
     cv2.namedWindow('Hand tracking game', cv2.WINDOW_NORMAL)
-    game_scene = game_scene_manager.GameScene(640, 480, 'Hand tracking game')
+    # game_scene = game_scene_manager.GameScene(640, 480, 'Hand tracking game')
 
     while True:
         # Expand dimensions since the model expects images to have shape: [1, None, None, 3]
@@ -75,8 +75,10 @@ if __name__ == '__main__':
                                          image_np)
 
         # predict movement and drav circles
+        # game_scene.clear_scene()
         for i in range(num_hands_detect):
             predicted_coords = predict_hand_movement(boxes, i, kalman_filters[i])
+            # game_scene.write_circle(predicted_coords[0], predicted_coords[1], 20)
             cv2.circle(image_np, (predicted_coords[0], predicted_coords[1]), 20, (77, 255, 9), 2, 8)
 
         # Calculate Frames per second (FPS)
@@ -90,8 +92,8 @@ if __name__ == '__main__':
                 detector_utils.draw_fps_on_image("FPS : " + str(int(fps)),
                                                  image_np)
 
-            cv2.imshow('Hand tracking game',
-                       cv2.cvtColor(image_np, cv2.COLOR_RGB2BGR))
+            cv2.imshow('Hand tracking game', cv2.cvtColor(image_np, cv2.COLOR_RGB2BGR))
+            # game_scene.show_scene()
 
             if cv2.waitKey(25) & 0xFF == ord('q'):
                 cv2.destroyAllWindows()
