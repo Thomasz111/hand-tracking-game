@@ -75,8 +75,9 @@ if __name__ == '__main__':
 
         # predict movement and drav circles
         for i in range(num_hands_detect):
-            real_coords = detector_utils.get_center_of_box(boxes, i, im_width, im_height)
-            cv2.circle(image_np, (real_coords[0], real_coords[1]), 30, (100, 100, 100), 2, 8)
+            if scores[i] > args.score_thresh:
+                real_coords = detector_utils.get_center_of_box(boxes, i, im_width, im_height)
+                cv2.circle(image_np, (real_coords[0], real_coords[1]), 30, (100, 100, 100), 2, 8)
             predicted_coords = predict_hand_movement(boxes, i, kalman_filters[i])
             cv2.circle(image_np, (predicted_coords[0], predicted_coords[1]), 30, (77, 255, 9), 2, 8)
 
