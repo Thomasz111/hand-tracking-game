@@ -49,7 +49,7 @@ if __name__ == '__main__':
     # score circles configuration
     num_circles = 2
     size_circles = 40
-    game_time = 10
+    game_time = 62
     circles_exists = 0
     score = 0
     rand_coords = []
@@ -99,8 +99,9 @@ if __name__ == '__main__':
             for hand in hand_coords:
                 if x[0] - size_circles < hand[0] < x[0] + size_circles \
                         and x[1] - size_circles < hand[1] < x[1] + size_circles:
-                    rand_coords.remove(x)
-                    score += 1
+                    if x in rand_coords:
+                        rand_coords.remove(x)
+                        score += 1
 
 
 
