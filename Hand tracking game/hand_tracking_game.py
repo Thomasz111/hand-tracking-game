@@ -4,7 +4,8 @@ import datetime
 import argparse
 from random import randint
 from kalman_filter import KalmanFilter
-# from utils import game_scene_manager
+from threading import Thread
+import copy
 
 detection_graph, sess = detector_utils.load_inference_graph()
 
@@ -17,6 +18,13 @@ def predict_hand_movement(boxes, num, kalman):
     hand_y = bottom + (top - bottom) / 2
 
     return kalman.estimate(hand_x, hand_y)
+
+
+def camera_thread():
+    global boxes, scores, image_np, detection_graph, image_to_process
+    while True:
+        boxes, scores = detector_utils.detect_objects(image_to_process,
+                                                      detection_graph, sess)
 
 
 if __name__ == '__main__':
@@ -53,13 +61,28 @@ if __name__ == '__main__':
     circles_exists = 0
     score = 0
     rand_coords = []
-    hand_coords = [0]*num_hands_detect
+    hand_coords = [0] * num_hands_detect
 
     kalman_filters = []
     for i in range(num_hands_detect):
         kalman_filters.append(KalmanFilter())
 
     cv2.namedWindow('Hand tracking game', cv2.WINDOW_NORMAL)
+
+    ############################################
+    ret, image_np = cap.read()
+    image_np = cv2.flip(image_np, 1)
+    try:
+        image_np = cv2.cvtColor(image_np, cv2.COLOR_BGR2RGB)
+    except:
+        print("Error converting to RGB")
+    image_to_process = copy.deepcopy(image_np)
+    boxes, scores = detector_utils.detect_objects(image_to_process,
+                                                  detection_graph, sess)
+    ############################################
+
+    camera_thread = Thread(target=camera_thread)
+    camera_thread.start()
 
     while True:
         # Expand dimensions since the model expects images to have shape: [1, None, None, 3]
@@ -69,13 +92,13 @@ if __name__ == '__main__':
             image_np = cv2.cvtColor(image_np, cv2.COLOR_BGR2RGB)
         except:
             print("Error converting to RGB")
-
+        image_to_process = copy.deepcopy(image_np)
         # Actual detection. Variable boxes contains the bounding box cordinates for hands detected,
         # while scores contains the confidence for each of these boxes.
         # Hint: If len(boxes) > 1 , you may assume you have found atleast one hand (within your score threshold)
 
-        boxes, scores = detector_utils.detect_objects(image_np,
-                                                      detection_graph, sess)
+        # boxes, scores = detector_utils.detect_objects(image_np,
+        #                                               detection_graph, sess)
 
         # draw bounding boxes on frame
         # detector_utils.draw_box_on_image(num_hands_detect, args.score_thresh,
@@ -84,15 +107,16 @@ if __name__ == '__main__':
 
         # predict movement and drav circles
         for i in range(num_hands_detect):
-            if scores[i] > args.score_thresh:
-                real_coords = detector_utils.get_center_of_box(boxes, i, im_width, im_height)
-                cv2.circle(image_np, (real_coords[0], real_coords[1]), 30, (100, 100, 100), 2, 8)
+            # if scores[i] > args.score_thresh:
+            real_coords = detector_utils.get_center_of_box(boxes, i, im_width, im_height)
+            cv2.circle(image_np, (real_coords[0], real_coords[1]), 30, (100, 100, 100), 2, 8)
             predicted_coords = predict_hand_movement(boxes, i, kalman_filters[i])
             cv2.circle(image_np, (predicted_coords[0], predicted_coords[1]), 30, (77, 255, 9), 2, 8)
             hand_coords[i] = predicted_coords
 
-        for i in range(num_circles-len(rand_coords)):
-            rand_coords.append((randint(size_circles, im_width-size_circles), randint(size_circles, im_height-size_circles)))
+        for i in range(num_circles - len(rand_coords)):
+            rand_coords.append(
+                (randint(size_circles, im_width - size_circles), randint(size_circles, im_height - size_circles)))
 
         for x in rand_coords:
             cv2.circle(image_np, (x[0], x[1]), size_circles, (255, 0, 0), 4, 8)
@@ -103,36 +127,40 @@ if __name__ == '__main__':
                         rand_coords.remove(x)
                         score += 1
 
-
-
         # Calculate Frames per second (FPS)
         num_frames += 1
         elapsed_time = (datetime.datetime.now() - start_time).total_seconds()
         fps = num_frames / elapsed_time
 
-        #cv2.putText(im, "Test", (0, size[1]), cv2.FONT_HERSHEY_COMPLEX, 2, (0,), 4)
-        #cv2.putText(im, "Test", (0, size[1]), cv2.FONT_HERSHEY_COMPLEX, 2, (255,), 2)
+        # cv2.putText(im, "Test", (0, size[1]), cv2.FONT_HERSHEY_COMPLEX, 2, (0,), 4)
+        # cv2.putText(im, "Test", (0, size[1]), cv2.FONT_HERSHEY_COMPLEX, 2, (255,), 2)
 
         # Display game time
         time_left = game_time - elapsed_time
-        cv2.putText(image_np, 'Time: %.0f s' % time_left, (int(im_width-100), 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0), 3)
-        cv2.putText(image_np, 'Time: %.0f s' % time_left, (int(im_width-100), 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), 1)
+        cv2.putText(image_np, 'Time: %.0f s' % time_left, (int(im_width - 100), 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
+                    (0, 0, 0), 3)
+        cv2.putText(image_np, 'Time: %.0f s' % time_left, (int(im_width - 100), 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
+                    (255, 255, 255), 1)
 
         # Display score
         cv2.putText(image_np, 'Score: %.0f' % score, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 3)
         cv2.putText(image_np, 'Score: %.0f' % score, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 1)
 
         if time_left < 0.1:
-            cv2.putText(image_np, 'End', (int(im_width/2)-100, int(im_height/2)+20), cv2.FONT_HERSHEY_SIMPLEX, 4, (0, 0, 0), 8)
-            cv2.putText(image_np, 'End', (int(im_width/2)-100, int(im_height/2)+20), cv2.FONT_HERSHEY_SIMPLEX, 4, (255, 255, 255), 6)
+            cv2.putText(image_np, 'End', (int(im_width / 2) - 100, int(im_height / 2) + 20), cv2.FONT_HERSHEY_SIMPLEX,
+                        4, (0, 0, 0), 8)
+            cv2.putText(image_np, 'End', (int(im_width / 2) - 100, int(im_height / 2) + 20), cv2.FONT_HERSHEY_SIMPLEX,
+                        4, (255, 255, 255), 6)
             while True:
                 cv2.imshow('Hand tracking game', cv2.cvtColor(image_np, cv2.COLOR_RGB2BGR))
                 if cv2.waitKey(25) & 0xFF == ord('q'):
                     cv2.destroyAllWindows()
+                    camera_thread.join()
                     break
             break
 
         cv2.imshow('Hand tracking game', cv2.cvtColor(image_np, cv2.COLOR_RGB2BGR))
         if cv2.waitKey(25) & 0xFF == ord('q'):
             cv2.destroyAllWindows()
+            camera_thread.join()
             break
