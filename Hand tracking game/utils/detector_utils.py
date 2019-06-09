@@ -91,6 +91,15 @@ def detect_objects(image_np, detection_graph, sess):
     return np.squeeze(boxes), np.squeeze(scores)
 
 
+def get_center_of_box(boxes, num, im_width, im_height):
+    (left, right, top, bottom) = (boxes[num][1] * im_width, boxes[num][3] * im_width,
+                                  boxes[num][0] * im_height, boxes[num][2] * im_height)
+
+    hand_x = int(left + (right - left) / 2)
+    hand_y = int(bottom + (top - bottom) / 2)
+    return hand_x, hand_y
+
+
 # Code to thread reading camera input.
 # Source : Adrian Rosebrock
 # https://www.pyimagesearch.com/2017/02/06/faster-video-file-fps-with-cv2-videocapture-and-opencv/

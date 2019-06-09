@@ -51,7 +51,6 @@ if __name__ == '__main__':
         kalman_filters.append(KalmanFilter())
 
     cv2.namedWindow('Hand tracking game', cv2.WINDOW_NORMAL)
-    # game_scene = game_scene_manager.GameScene(640, 480, 'Hand tracking game')
 
     while True:
         # Expand dimensions since the model expects images to have shape: [1, None, None, 3]
@@ -70,22 +69,21 @@ if __name__ == '__main__':
                                                       detection_graph, sess)
 
         # draw bounding boxes on frame
-        detector_utils.draw_box_on_image(num_hands_detect, args.score_thresh,
-                                         scores, boxes, im_width, im_height,
-                                         image_np)
+        # detector_utils.draw_box_on_image(num_hands_detect, args.score_thresh,
+        #                                  scores, boxes, im_width, im_height,
+        #                                  image_np)
 
         # predict movement and drav circles
-        # game_scene.clear_scene()
         for i in range(num_hands_detect):
+            real_coords = detector_utils.get_center_of_box(boxes, i, im_width, im_height)
+            cv2.circle(image_np, (real_coords[0], real_coords[1]), 30, (100, 100, 100), 2, 8)
             predicted_coords = predict_hand_movement(boxes, i, kalman_filters[i])
-            # game_scene.write_circle(predicted_coords[0], predicted_coords[1], 20)
-            cv2.circle(image_np, (predicted_coords[0], predicted_coords[1]), 20, (77, 255, 9), 2, 8)
+            cv2.circle(image_np, (predicted_coords[0], predicted_coords[1]), 30, (77, 255, 9), 2, 8)
 
         # Calculate Frames per second (FPS)
         num_frames += 1
         elapsed_time = (datetime.datetime.now() - start_time).total_seconds()
         fps = num_frames / elapsed_time
-        print(fps)
         cv2.imshow('Hand tracking game', cv2.cvtColor(image_np, cv2.COLOR_RGB2BGR))
         if cv2.waitKey(25) & 0xFF == ord('q'):
             cv2.destroyAllWindows()
