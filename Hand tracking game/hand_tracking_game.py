@@ -61,7 +61,8 @@ if __name__ == '__main__':
     circles_exists = 0
     score = 0
     rand_coords = []
-    hand_coords = [0] * num_hands_detect
+    hand_coords = [[0]] * num_hands_detect
+    hand_coords_real = [[0]] * num_hands_detect
 
     kalman_filters = []
     for i in range(num_hands_detect):
@@ -110,6 +111,7 @@ if __name__ == '__main__':
             if scores[i] > args.score_thresh:
                 real_coords = detector_utils.get_center_of_box(boxes, i, im_width, im_height)
                 cv2.circle(image_np, (real_coords[0], real_coords[1]), 30, (100, 100, 100), 2, 8)
+                hand_coords_real[i] = real_coords
             predicted_coords = predict_hand_movement(boxes, i, kalman_filters[i])
             cv2.circle(image_np, (predicted_coords[0], predicted_coords[1]), 30, (77, 255, 9), 2, 8)
             hand_coords[i] = predicted_coords
@@ -120,12 +122,16 @@ if __name__ == '__main__':
 
         for x in rand_coords:
             cv2.circle(image_np, (x[0], x[1]), size_circles, (255, 0, 0), 4, 8)
-            for hand in hand_coords:
-                if x[0] - size_circles < hand[0] < x[0] + size_circles \
-                        and x[1] - size_circles < hand[1] < x[1] + size_circles:
-                    if x in rand_coords:
-                        rand_coords.remove(x)
-                        score += 1
+            for predicted in hand_coords:
+                if x in rand_coords and x[0] - size_circles < predicted[0] < x[0] + size_circles \
+                        and x[1] - size_circles < predicted[1] < x[1] + size_circles:
+                    rand_coords.remove(x)
+                    score += 1
+            for real in hand_coords_real:
+                if x in rand_coords and x[0] - size_circles < real[0] < x[0] + size_circles \
+                        and x[1] - size_circles < real[1] < x[1] + size_circles:
+                    rand_coords.remove(x)
+                    score += 1
 
         # Calculate Frames per second (FPS)
         num_frames += 1
