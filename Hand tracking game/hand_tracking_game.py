@@ -2,6 +2,7 @@ from utils import detector_utils as detector_utils
 import cv2
 import datetime
 import argparse
+from random import randint
 from kalman_filter import KalmanFilter
 # from utils import game_scene_manager
 
@@ -45,6 +46,14 @@ if __name__ == '__main__':
     im_width, im_height = (cap.get(3), cap.get(4))
     # max number of hands we want to detect/track
     num_hands_detect = 2
+    # score circles configuration
+    num_circles = 2
+    size_circles = 40
+    game_time = 10
+    circles_exists = 0
+    score = 0
+    rand_coords = []
+    hand_coords = [0]*num_hands_detect
 
     kalman_filters = []
     for i in range(num_hands_detect):
@@ -80,11 +89,48 @@ if __name__ == '__main__':
                 cv2.circle(image_np, (real_coords[0], real_coords[1]), 30, (100, 100, 100), 2, 8)
             predicted_coords = predict_hand_movement(boxes, i, kalman_filters[i])
             cv2.circle(image_np, (predicted_coords[0], predicted_coords[1]), 30, (77, 255, 9), 2, 8)
+            hand_coords[i] = predicted_coords
+
+        for i in range(num_circles-len(rand_coords)):
+            rand_coords.append((randint(size_circles, im_width-size_circles), randint(size_circles, im_height-size_circles)))
+
+        for x in rand_coords:
+            cv2.circle(image_np, (x[0], x[1]), size_circles, (255, 0, 0), 4, 8)
+            for hand in hand_coords:
+                if x[0] - size_circles < hand[0] < x[0] + size_circles \
+                        and x[1] - size_circles < hand[1] < x[1] + size_circles:
+                    rand_coords.remove(x)
+                    score += 1
+
+
 
         # Calculate Frames per second (FPS)
         num_frames += 1
         elapsed_time = (datetime.datetime.now() - start_time).total_seconds()
         fps = num_frames / elapsed_time
+
+        #cv2.putText(im, "Test", (0, size[1]), cv2.FONT_HERSHEY_COMPLEX, 2, (0,), 4)
+        #cv2.putText(im, "Test", (0, size[1]), cv2.FONT_HERSHEY_COMPLEX, 2, (255,), 2)
+
+        # Display game time
+        time_left = game_time - elapsed_time
+        cv2.putText(image_np, 'Time: %.0f s' % time_left, (int(im_width-100), 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0), 3)
+        cv2.putText(image_np, 'Time: %.0f s' % time_left, (int(im_width-100), 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), 1)
+
+        # Display score
+        cv2.putText(image_np, 'Score: %.0f' % score, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 3)
+        cv2.putText(image_np, 'Score: %.0f' % score, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 1)
+
+        if time_left < 0.1:
+            cv2.putText(image_np, 'End', (int(im_width/2)-100, int(im_height/2)+20), cv2.FONT_HERSHEY_SIMPLEX, 4, (0, 0, 0), 8)
+            cv2.putText(image_np, 'End', (int(im_width/2)-100, int(im_height/2)+20), cv2.FONT_HERSHEY_SIMPLEX, 4, (255, 255, 255), 6)
+            while True:
+                cv2.imshow('Hand tracking game', cv2.cvtColor(image_np, cv2.COLOR_RGB2BGR))
+                if cv2.waitKey(25) & 0xFF == ord('q'):
+                    cv2.destroyAllWindows()
+                    break
+            break
+
         cv2.imshow('Hand tracking game', cv2.cvtColor(image_np, cv2.COLOR_RGB2BGR))
         if cv2.waitKey(25) & 0xFF == ord('q'):
             cv2.destroyAllWindows()
